@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>抖音面板 · 兼容性检测</title>
+<style>
+body{margin:0;background:#202126;color:#eee;font:15px/1.7 system-ui,"Microsoft YaHei",sans-serif}
+main{max-width:680px;margin:64px auto;padding:28px}h1{font-size:28px;font-weight:600}
+.card{padding:20px 24px;margin:16px 0;background:#2b2d34;border-radius:12px}
+strong{color:#61e5cd}p{color:#babcc5}code{font-size:13px}a{color:#61e5cd}
+</style>
+<main><h1>抖音面板 · 兼容性检测</h1>
+<p>本页检测 C4D 内置网页控件，不访问抖音账号。</p>
+<div class="card">网页 → C4D → 网页：<strong id="bridge">检测中…</strong></div>
+<div class="card" id="media"></div>
+<p>编码检测仅表示浏览器声明支持，实际播放还取决于网页、网络及媒体格式。</p>
+<p>点击上方“抖音首页”即可返回。面板左上角的 C4D 停靠手柄可将窗口嵌入工作布局。</p>
+</main>
+<script>
+(() => {
+  const video = document.createElement('video');
+  const h264 = video.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"');
+  const webm = video.canPlayType('video/webm; codecs="vp9, opus"');
+  document.getElementById('media').textContent =
+    `H.264 / AAC：${h264 || '未声明支持'}　·　WebM：${webm || '未声明支持'}`;
+  let timer, attempts = 0;
+  const send = event => window.maxon?.postMessage(JSON.stringify({
+    app:'douyin-panel-diagnostic', event, h264, webm
+  }));
+  const start = () => {
+    if (!window.maxon?.postMessage) return false;
+    window.maxon.messageListener = message => {
+      try {
+        const data = JSON.parse(message);
+        if (data.app !== 'douyin-panel-diagnostic' || data.event !== 'ack') return;
+        clearInterval(timer);
+        document.getElementById('bridge').textContent = '双向通信成功';
+        send('confirmed');
+      } catch (_) {}
+    };
+    send('ready');
+    return true;
+  };
+  timer = setInterval(() => {
+    attempts++;
+    start();
+    if (attempts >= 20) {
+      clearInterval(timer);
+      if (document.getElementById('bridge').textContent === '检测中…')
+        document.getElementById('bridge').textContent = '未收到回应，请使用 C4D 2027 或更新版本';
+    }
+  }, 500);
+})();
+</script>
+</html>
